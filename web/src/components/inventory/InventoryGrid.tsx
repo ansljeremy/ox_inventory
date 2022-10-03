@@ -6,6 +6,8 @@ import InventoryContext from './InventoryContext';
 import { getTotalWeight } from '../../helpers';
 import { createPortal } from 'react-dom';
 import { Typography } from '@mui/material';
+import { imagepath } from '../../store/imagepath';
+import CraftingSlot from '../crafting/CraftingSlot';
 
 const InventoryGrid: React.FC<{ inventory: Inventory }> = ({ inventory }) => {
   const weight = React.useMemo(
@@ -27,12 +29,26 @@ const InventoryGrid: React.FC<{ inventory: Inventory }> = ({ inventory }) => {
           </div>
           <WeightBar percent={inventory.maxWeight ? (weight / inventory.maxWeight) * 100 : 0} />
         </div>
-        <div className="inventory-grid-container">
+        <div className={inventory.type === 'crafting' ? 'crafting-grid' : 'inventory-grid-container'}>
           <>
-            {inventory.items.map((item) => (
-              <InventorySlot key={`${inventory.type}-${inventory.id}-${item.slot}`} item={item} inventory={inventory} />
-            ))}
-            {inventory.type === 'player' && createPortal(<InventoryContext />, document.body)}
+            {inventory.type !== 'crafting' ? (
+              <>
+                {inventory.items.map((item) => (
+                  <InventorySlot
+                    key={`${inventory.type}-${inventory.id}-${item.slot}`}
+                    item={item}
+                    inventory={inventory}
+                  />
+                ))}
+                {inventory.type === 'player' && createPortal(<InventoryContext />, document.body)}
+              </>
+            ) : (
+              <>
+                {inventory.items.map((item) => (
+                  <CraftingSlot key={`${item.slot}`} item={item} />
+                ))}
+              </>
+            )}
           </>
         </div>
       </div>
