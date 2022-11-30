@@ -186,10 +186,10 @@ function server.convertInventory(playerId, items)
 				end
 
 				if not hasThis then
-					local account = player.getAccount(name)
+					local amount = player.Functions.GetMoney(name == 'money' and 'cash' or name)
 
-					if account.money then
-						items[#items + 1] = {amount = account.money}
+					if amount then
+						items[#items + 1] = { name = name, amount = amount }
 					end
 				end
 			end
@@ -198,15 +198,32 @@ function server.convertInventory(playerId, items)
 		for _, data in pairs(items) do
 			local item = Items(data.name)
 
-			if item and data then
-				local metadata = Items.Metadata(playerId, item, data.info, data.amount)
-				local weight = Inventory.SlotWeight(item, {count = data.amount, metadata = metadata})
+			if item?.name then
+				local metadata, count = Items.Metadata(playerId, item, data.info, data.amount or data.count or 1)
+				local weight = Inventory.SlotWeight(item, {count = count, metadata = metadata})
 				totalWeight += weight
 				slot += 1
-				returnData[slot] = {name = item.name, label = item.label, weight = weight, slot = slot, count = data.amount, description = item.description, metadata = metadata, stack = item.stack, close = item.close}
+				returnData[slot] = {name = item.name, label = item.label, weight = weight, slot = slot, count = count, description = item.description, metadata = metadata, stack = item.stack, close = item.close}
 			end
 		end
 
 		return returnData, totalWeight
 	end
 end
+
+function server.setPlayerStatus(playerId, values)
+	local Player = QBCore.Functions.GetPlayer(playerId)
+
+	if not Player then return end
+
+	local playerMetadata = player.PlayerData.metadata
+
+	for name, value in pairs(values) do
+		if playerMetadata[name] then
+			if value > 100 or value < 100 then value *= 0.0001 end
+
+			Player.Functions.SetMetaData(name, playerMetadata[name] + value)
+		end
+	end
+end
+

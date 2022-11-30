@@ -7,7 +7,7 @@ game 'gta5'
 --[[ Resource Information ]] --
 name 'ox_inventory'
 author 'Overextended'
-version      '2.14.1'
+version      '2.17.4'
 repository 'https://github.com/overextended/ox_inventory'
 description 'Slot-based inventory with item metadata support'
 
@@ -36,6 +36,7 @@ client_scripts {
 	'modules/weapon/client.lua',
 	'modules/bridge/client.lua',
 	'modules/interface/client.lua',
+	'modules/crafting/client.lua',
 	'modules/shops/client.lua',
 	'modules/inventory/client.lua',
 	'client.lua'
@@ -43,9 +44,11 @@ client_scripts {
 
 server_scripts {
 	'@oxmysql/lib/MySQL.lua',
+	'modules/hooks/server.lua',
 	'modules/mysql/server.lua',
 	'modules/items/server.lua',
 	'modules/inventory/server.lua',
+	'modules/crafting/server.lua',
 	'modules/shops/server.lua',
 	'modules/pefcl/server.lua',
 	'server.lua',

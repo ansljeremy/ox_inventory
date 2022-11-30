@@ -2,18 +2,15 @@ if not lib then return end
 
 local shops = {}
 
-local function createShopBlip(name, data, location)
-	local blip = AddBlipForCoord(location.x, location.y, location.z)
-	SetBlipSprite(blip, data.id)
+local function createBlip(settings, coords)
+	local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
+	SetBlipSprite(blip, settings.id)
 	SetBlipDisplay(blip, 4)
-	SetBlipScale(blip, data.scale)
-	SetBlipColour(blip, data.colour)
+	SetBlipScale(blip, settings.scale)
+	SetBlipColour(blip, settings.colour)
 	SetBlipAsShortRange(blip, true)
-	AddTextEntry(name, name)
-	BeginTextCommandSetBlipName(name)
+	BeginTextCommandSetBlipName(settings.name)
 	EndTextCommandSetBlipName(blip)
-
-	return blip
 end
 
 local function openShop(data)
@@ -54,14 +51,21 @@ client.shops = setmetatable(data('shops'), {
 		for type, shop in pairs(self) do
 			if shop.jobs then shop.groups = shop.jobs end
 
+			local blip = shop.blip
+
+			if blip then
+				blip.name = ('ox_shop_%s'):format(type)
+				AddTextEntry(blip.name, shop.name or type)
+			end
+
 			if not shop.groups or client.hasGroup(shop.groups) then
-				if shared.qtarget then
+				if shared.target then
 					if shop.model then
 						exports.qtarget:AddTargetModel(shop.model, {
 							options = {
 								{
 									icon = 'fas fa-shopping-basket',
-									label = shop.label or locale('open_shop', shop.name),
+									label = shop.label or locale('open_label', shop.name),
 									action = function()
 										openShop({type=type})
 									end
@@ -77,7 +81,7 @@ client.shops = setmetatable(data('shops'), {
 
 							shops[id] = {
 								zoneId = shopid,
-								blip = shop.blip and createShopBlip(shop.name, shop.blip, target.loc)
+								blip = blip and createBlip(blip, target.loc)
 							}
 
 							exports.qtarget:AddBoxZone(shopid, target.loc, target.length or 0.5, target.width or 0.5, {
@@ -91,11 +95,12 @@ client.shops = setmetatable(data('shops'), {
 								options = {
 									{
 										icon = 'fas fa-shopping-basket',
-										label = shop.label or locale('open_shop', shop.name),
+										label = shop.label or locale('open_label', shop.name),
 										job = shop.groups,
 										action = function()
 											openShop({id=i, type=type})
-										end
+										end,
+										iconColor = target.iconColor,
 									},
 								},
 								distance = target.distance or 2.0
@@ -115,7 +120,7 @@ client.shops = setmetatable(data('shops'), {
 							invId = i,
 							type = type,
 							nearby = nearbyShop,
-							blip = shop.blip and createShopBlip(shop.name, shop.blip, coords)
+							blip = blip and createBlip(blip, coords)
 						})
 					end
 				end

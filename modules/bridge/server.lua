@@ -44,7 +44,7 @@ end)
 local function playerDropped(source)
 	local inv = Inventory(source)
 
-	if inv then
+	if inv?.player then
 		local openInventory = inv.open and Inventory(inv.open)
 
 		if openInventory then
@@ -55,11 +55,13 @@ local function playerDropped(source)
 			db.savePlayer(inv.owner, json.encode(inv:minimal()))
 		end
 
-		Inventory.Remove(source)
+		Inventory.Remove(inv)
 	end
 end
 
-AddEventHandler('playerDropped', playerDropped)
+AddEventHandler('playerDropped', function()
+	playerDropped(source)
+end)
 
 local scriptPath = ('modules/bridge/%s/server.lua'):format(shared.framework)
 local resourceFile = LoadResourceFile(cache.resource, scriptPath)

@@ -3,7 +3,7 @@ if not lib then return end
 local Items = server.items
 local Inventory = server.inventory
 local Shops = {}
-local locations = shared.qtarget and 'targets' or 'locations'
+local locations = shared.target and 'targets' or 'locations'
 
 ---@class OxShopItem
 ---@field name string
@@ -39,7 +39,8 @@ local function createShop(shopName, shopDetails)
 				items = table.clone(shopDetails.inventory),
 				slots = #shopDetails.inventory,
 				type = 'shop',
-				coords = shared.qtarget and shopDetails.targets?[i]?.loc or shopLocations[i],
+				coords = shared.target and shopDetails.targets?[i]?.loc or shopLocations[i],
+				distance = shared.target and shopDetails.targets?[i]?.distance,
 			}
 
 			for j = 1, Shops[shopName][i].slots do
@@ -152,7 +153,7 @@ lib.callback.register('ox_inventory:openShop', function(source, data)
 			if not group then return end
 		end
 
-		if shop.coords and #(GetEntityCoords(GetPlayerPed(source)) - shop.coords) > 10 then
+		if type(shop.coords) == 'vector3' and #(GetEntityCoords(GetPlayerPed(source)) - shop.coords) > 10 then
 			return
 		end
 
@@ -208,32 +209,39 @@ lib.callback.register('ox_inventory:buyItem', function(source, data)
 			local price = count * fromData.price
 
 			if toData == nil or (fromItem.name == toItem.name and fromItem.stack and table.matches(toData.metadata, metadata)) then
+				local newWeight = playerInv.weight + (fromItem.weight + (metadata?.weight or 0)) * count
+
+				if newWeight > playerInv.maxWeight then
+					return false, false, { type = 'error', description = locale('cannot_carry') }
+				end
+
 				local canAfford = price >= 0 and Inventory.GetItem(source, currency, false, true) >= price
-				if canAfford then
-					local newWeight = playerInv.weight + (fromItem.weight + (metadata?.weight or 0)) * count
-					if newWeight > playerInv.maxWeight then
-						return false, false, { type = 'error', description = locale('cannot_carry') }
-					else
-						Inventory.SetSlot(playerInv, fromItem, count, metadata, data.toSlot)
-						if fromData.count then shop.items[data.fromSlot].count = fromData.count - count end
-						playerInv.weight = newWeight
-					end
 
-					Inventory.RemoveItem(source, currency, price)
-					if server.syncInventory then server.syncInventory(playerInv) end
-					local message = locale('purchased_for', count, fromItem.label, (currency == 'money' and locale('$') or comma_value(price)), (currency == 'money' and comma_value(price) or ' '..Items(currency).label))
-
-					if server.loglevel > 0 then
-						if server.loglevel > 1 or fromData.price >= 500 then
-							lib.logger(playerInv.owner, 'buyItem', ('"%s" %s'):format(playerInv.label, message:lower()), ('shop:%s'):format(shop.label))
-						end
-					end
-
-					return true, {data.toSlot, playerInv.items[data.toSlot], shop.items[data.fromSlot].count and shop.items[data.fromSlot], playerInv.weight}, { type = 'success', description = message }
-				else
+				if not canAfford then
 					return false, false, { type = 'error', description = locale('cannot_afford', ('%s%s'):format((currency == 'money' and locale('$') or comma_value(price)), (currency == 'money' and comma_value(price) or ' '..Items(currency).label))) }
 				end
+
+				Inventory.SetSlot(playerInv, fromItem, count, metadata, data.toSlot)
+				playerInv.weight = newWeight
+				Inventory.RemoveItem(source, currency, price)
+
+				if fromData.count then
+					shop.items[data.fromSlot].count = fromData.count - count
+				end
+
+				if server.syncInventory then server.syncInventory(playerInv) end
+
+				local message = locale('purchased_for', count, fromItem.label, (currency == 'money' and locale('$') or comma_value(price)), (currency == 'money' and comma_value(price) or ' '..Items(currency).label))
+
+				if server.loglevel > 0 then
+					if server.loglevel > 1 or fromData.price >= 500 then
+						lib.logger(playerInv.owner, 'buyItem', ('"%s" %s'):format(playerInv.label, message:lower()), ('shop:%s'):format(shop.label))
+					end
+				end
+
+				return true, {data.toSlot, playerInv.items[data.toSlot], shop.items[data.fromSlot].count and shop.items[data.fromSlot], playerInv.weight}, { type = 'success', description = message }
 			end
+
 			return false, false, { type = 'error', description = locale('unable_stack_items') }
 		end
 	end
